@@ -46,8 +46,23 @@ jobs:
         # A project site is served from https://<user>.github.io/<repository>/,
         # so the repository name becomes the base path. Taking it from the event
         # keeps this correct if the repository is ever renamed.
+        #
+        # The memorial's real details come from repository *variables*
+        # (Settings -> Secrets and variables -> Actions -> Variables), not from
+        # the repository itself, so a clone or a fork only ever gets the
+        # placeholder content in src/data/site.json. Anything left unset falls
+        # back to that placeholder.
+        #
+        # These are content, not secrets: they are compiled into the bundle and
+        # displayed on the page. Never use secrets here.
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
+          VITE_SITE_TITLE: ${{ vars.SITE_TITLE }}
+          VITE_SITE_NAME: ${{ vars.SITE_NAME }}
+          VITE_SITE_DATE_OF_BIRTH: ${{ vars.SITE_DATE_OF_BIRTH }}
+          VITE_SITE_DATE_OF_DEATH: ${{ vars.SITE_DATE_OF_DEATH }}
+          VITE_SITE_WELCOME_TEXT: ${{ vars.SITE_WELCOME_TEXT }}
+          VITE_SITE_MAIN_PHOTO: ${{ vars.SITE_MAIN_PHOTO }}
         run: npm run build
 
       - name: Upload the built site
