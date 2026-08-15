@@ -1,0 +1,105 @@
+.hero {
+  display: grid;
+  gap: var(--space-6);
+  align-items: center;
+  margin-bottom: var(--space-8);
+}
+
+.portrait {
+  margin: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--colour-border);
+  background-color: var(--colour-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.portrait img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+}
+
+.portraitPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-6);
+  aspect-ratio: 4 / 5;
+  background-color: var(--colour-surface-sunken);
+  color: var(--colour-text-muted);
+}
+
+.eyebrow {
+  display: block;
+  font-size: 0.85rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--colour-text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.name {
+  margin-bottom: var(--space-3);
+}
+
+.dates {
+  color: var(--colour-text-muted);
+  font-size: 1.05rem;
+  margin-bottom: var(--space-5);
+}
+
+.welcome {
+  font-size: 1.1rem;
+  max-width: 34rem;
+}
+
+.linkGrid {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.linkCard {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 120ms ease-in-out;
+}
+
+.linkCard:hover {
+  border-color: var(--colour-accent);
+  color: inherit;
+}
+
+.linkCard h2 {
+  margin-bottom: var(--space-2);
+}
+
+.linkCard p {
+  color: var(--colour-text-muted);
+}
+
+.linkCardAction {
+  display: inline-block;
+  margin-top: var(--space-4);
+  color: var(--colour-accent-strong);
+  font-weight: 600;
+}
+
+@media (min-width: 48em) {
+  .hero {
+    grid-template-columns: minmax(0, 18rem) minmax(0, 1fr);
+    gap: var(--space-7);
+  }
+
+  .linkGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64em) {
+  .hero {
+    grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+  }
+}

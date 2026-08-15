@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" role="img" aria-label="Placeholder photograph three">
+  <defs>
+    <linearGradient id="sky3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#dde3ea" />
+      <stop offset="100%" stop-color="#bcc8d6" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="900" fill="url(#sky3)" />
+  <circle cx="420" cy="250" r="92" fill="#eef2f6" opacity="0.7" />
+  <path d="M0 620 L340 460 L620 640 L900 450 L1200 640 L1200 900 L0 900 Z" fill="#bcc8d6" opacity="0.85" />
+  <path d="M0 760 L300 620 L640 780 L960 640 L1200 760 L1200 900 L0 900 Z" fill="#6b7a8c" opacity="0.55" />
+  <text x="600" y="850" text-anchor="middle" font-family="Georgia, serif" font-size="42" fill="#404b58">Placeholder photograph three</text>
+</svg>

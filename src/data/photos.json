@@ -1,0 +1,46 @@
+[
+  {
+    "id": "demo-photo-1",
+    "url": "placeholders/photo-1.svg",
+    "thumbnailUrl": "placeholders/photo-1.svg",
+    "caption": "Placeholder photograph one",
+    "uploadedBy": "Demo Contributor",
+    "uploaded": "2026-07-02T18:20:00.000Z"
+  },
+  {
+    "id": "demo-photo-2",
+    "url": "placeholders/photo-2.svg",
+    "thumbnailUrl": "placeholders/photo-2.svg",
+    "caption": "Placeholder photograph two",
+    "uploadedBy": "Demo Contributor",
+    "uploaded": "2026-07-05T11:00:00.000Z"
+  },
+  {
+    "id": "demo-photo-3",
+    "url": "placeholders/photo-3.svg",
+    "thumbnailUrl": "placeholders/photo-3.svg",
+    "caption": "Placeholder photograph three",
+    "uploaded": "2026-07-11T14:30:00.000Z"
+  },
+  {
+    "id": "demo-photo-4",
+    "url": "placeholders/photo-4.svg",
+    "thumbnailUrl": "placeholders/photo-4.svg",
+    "caption": "Placeholder photograph four",
+    "uploaded": "2026-07-19T16:10:00.000Z"
+  },
+  {
+    "id": "demo-photo-5",
+    "url": "placeholders/photo-5.svg",
+    "thumbnailUrl": "placeholders/photo-5.svg",
+    "caption": "Placeholder photograph five",
+    "uploaded": "2026-07-24T08:55:00.000Z"
+  },
+  {
+    "id": "demo-photo-6",
+    "url": "placeholders/photo-6.svg",
+    "thumbnailUrl": "placeholders/photo-6.svg",
+    "caption": "Placeholder photograph six",
+    "uploaded": "2026-07-28T20:45:00.000Z"
+  }
+]

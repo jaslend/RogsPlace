@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" role="img" aria-label="Placeholder photograph six">
+  <defs>
+    <linearGradient id="sky6" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e6e3ec" />
+      <stop offset="100%" stop-color="#c7c1d8" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="900" fill="url(#sky6)" />
+  <circle cx="960" cy="240" r="88" fill="#f1eff6" opacity="0.75" />
+  <path d="M0 670 L300 510 L560 670 L840 480 L1200 680 L1200 900 L0 900 Z" fill="#c7c1d8" opacity="0.85" />
+  <path d="M0 780 L300 640 L640 790 L980 660 L1200 780 L1200 900 L0 900 Z" fill="#736c86" opacity="0.55" />
+  <text x="600" y="850" text-anchor="middle" font-family="Georgia, serif" font-size="42" fill="#474154">Placeholder photograph six</text>
+</svg>
