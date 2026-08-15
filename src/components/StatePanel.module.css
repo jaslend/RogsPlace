@@ -1,0 +1,31 @@
+.panel {
+  text-align: center;
+  padding: var(--space-7) var(--space-5);
+  border: 1px dashed var(--colour-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--colour-surface);
+  color: var(--colour-text-muted);
+}
+
+.panelError {
+  border-style: solid;
+  border-color: var(--colour-error);
+  background-color: var(--colour-error-soft);
+  color: var(--colour-error);
+}
+
+.title {
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: var(--space-2);
+  color: inherit;
+}
+
+.actions {
+  margin-top: var(--space-5);
+  display: flex;
+  justify-content: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}

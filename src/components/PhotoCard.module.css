@@ -1,0 +1,38 @@
+.trigger {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--colour-surface);
+  cursor: pointer;
+  overflow: hidden;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  box-shadow: var(--shadow-soft);
+  transition: border-color 120ms ease-in-out;
+}
+
+.trigger:hover {
+  border-color: var(--colour-accent);
+}
+
+.imageFrame {
+  display: block;
+  aspect-ratio: 4 / 3;
+  background-color: var(--colour-surface-sunken);
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.caption {
+  display: block;
+  padding: var(--space-3) var(--space-4);
+  font-size: 0.95rem;
+  color: var(--colour-text-muted);
+}
