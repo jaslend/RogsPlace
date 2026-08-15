@@ -17,12 +17,12 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Environment files -- never commit real secrets or environment overrides.
-# .env.example and .env.development are committed on purpose (see README).
+# Environment files. Only .env.example is committed: everything else may hold
+# the memorial's real details, which are deliberately kept out of the
+# repository (see README, "Keeping the real details out of the repository").
 .env
 .env.*
 !.env.example
-!.env.development
 
 # Editor / OS
 .vscode/*

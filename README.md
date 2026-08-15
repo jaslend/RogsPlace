@@ -59,9 +59,19 @@ The site is then available at <http://localhost:5173/>.
 Vite exposes anything prefixed `VITE_` to browser code, so **only public values
 belong in these files**. Copy `.env.example` to `.env.local` to set them.
 
-| Variable       | Purpose                                                            |
-| -------------- | ------------------------------------------------------------------ |
-| `VITE_API_URL` | Base URL of the backend API. Leave unset to use the local mock data |
+| Variable                    | Purpose                                                             |
+| --------------------------- | ------------------------------------------------------------------- |
+| `VITE_API_URL`              | Base URL of the backend API. Leave unset to use the local mock data  |
+| `VITE_SITE_TITLE`           | Heading above the name, e.g. "In Loving Memory"                      |
+| `VITE_SITE_NAME`            | Name of the person being remembered                                  |
+| `VITE_SITE_DATE_OF_BIRTH`   | ISO 8601 date, e.g. `1938-04-17`                                     |
+| `VITE_SITE_DATE_OF_DEATH`   | ISO 8601 date, e.g. `2026-02-03`                                     |
+| `VITE_SITE_WELCOME_TEXT`    | Introductory paragraph on the home page                              |
+| `VITE_SITE_MAIN_PHOTO`      | Path relative to the site root, or an absolute URL                   |
+
+The `VITE_SITE_*` variables exist so that the real memorial details never have
+to be committed — see the next section. Any of them left unset falls back to the
+placeholder in `src/data/site.json`.
 
 `BASE_PATH` is a build-time variable (not `VITE_` prefixed, and not available to
 browser code). It sets the path the site is served from and is only needed for
@@ -69,6 +79,49 @@ GitHub Pages — see below.
 
 Environment variables are read in exactly one place, `src/config/appConfig.ts`.
 Nothing else in the application touches `import.meta.env`.
+
+## Keeping the real details out of the repository
+
+`src/data/site.json` holds placeholder content only. The real details are
+supplied at build time from **GitHub Actions variables**, so anyone who clones
+or forks this repository gets the placeholder and nothing else — and there is no
+copy of the details in the git history.
+
+Set them once, in **Settings → Secrets and variables → Actions → Variables**, or
+from the command line:
+
+```bash
+gh variable set SITE_NAME       --body "…"
+gh variable set SITE_TITLE      --body "In Loving Memory"
+gh variable set SITE_WELCOME_TEXT --body "…"
+gh variable set SITE_DATE_OF_BIRTH --body "1938-04-17"
+gh variable set SITE_DATE_OF_DEATH --body "2026-02-03"
+gh variable set SITE_MAIN_PHOTO --body "photos/main.jpg"
+```
+
+The workflow maps each `SITE_*` variable to the matching `VITE_SITE_*` build
+variable, `appConfig` reads it, and `siteService` layers it over the placeholder.
+The next push to `main` picks up any change; nothing needs to be committed.
+
+To see the real content locally, put the same values in `.env.local`, which is
+ignored by git. Every `.env*` file except `.env.example` is ignored.
+
+**This is privacy, not secrecy.** The values are compiled into the JavaScript
+bundle and displayed on a public web page — that is the point of the site. What
+this arrangement avoids is committing personal details to a repository that may
+be public, cloned or forked. So:
+
+- use Actions **variables**, never Actions **secrets**;
+- never give a `VITE_` prefix to anything that must genuinely stay private;
+- remember that a repository variable is visible to anyone with access to the
+  repository's settings.
+
+Once the Worker exists, `/api/config` becomes the source of this content and the
+build-time variables no longer apply.
+
+Memories and photographs are not covered by this: they are visitor-submitted
+content and belong in R2 behind the Worker API. Until then, `memories.json` and
+`photos.json` should hold demonstration data only.
 
 ## How the data layer is arranged
 
@@ -185,9 +238,13 @@ To remove the demonstration content:
 - Empty the array in `src/data/memories.json` to `[]`.
 - Empty the array in `src/data/photos.json` to `[]` and delete
   `public/placeholders/`.
-- Fill in `src/data/site.json`.
 
 Every demonstration entry has an id beginning `demo-`.
+
+Do **not** fill in `src/data/site.json` with the real details — set the
+repository variables instead, as described in "Keeping the real details out of
+the repository". The tests do not read any of these files, so emptying them
+cannot break the build.
 
 ## Planned architecture
 
