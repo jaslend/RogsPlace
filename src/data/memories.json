@@ -1,0 +1,21 @@
+[
+  {
+    "id": "demo-1",
+    "name": "Demo Contributor",
+    "message": "This is example content used to demonstrate how a submitted memory is displayed. Replace or delete the entries in src/data/memories.json once real memories are available.",
+    "created": "2026-07-02T18:20:00.000Z"
+  },
+  {
+    "id": "demo-2",
+    "name": "Demo Contributor",
+    "message": "A second example memory, kept a little longer so that the layout can be checked with a paragraph of text rather than a single line. Nothing here describes a real person or a real event.",
+    "created": "2026-07-14T09:05:00.000Z"
+  },
+  {
+    "id": "demo-3",
+    "name": "Demo Contributor",
+    "message": "A third example memory, shown with an associated photograph so that the card layout can be reviewed.",
+    "created": "2026-07-28T20:45:00.000Z",
+    "photoId": "demo-photo-2"
+  }
+]
