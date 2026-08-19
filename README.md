@@ -211,7 +211,9 @@ worker/
   src/index.ts                      Router -- every reachable route is listed here
   src/auth/session.ts               Signed session cookies
   src/auth/invite.ts                Invitation hashing and comparison
+  src/auth/access.ts                Verifying Cloudflare Access tokens
   src/auth/context.ts               Resolving a role, refusing a request
+  src/indexes.ts                    Rebuilding the published lists
   src/http.ts                       Responses, security headers, CORS, origin checks
   src/storage.ts                    R2 keys, id validation, JSON reads
   src/routes/                       One module per resource
@@ -231,7 +233,7 @@ src/
   data/                             Mock site, memories and photos JSON
   hooks/useAsyncData.ts             Loading / success / error state for a fetch
   models/                           SiteConfig, Memory, Photo
-  pages/                            One component per route
+  pages/                            One component per route, including /admin
   services/                         Mock and HTTP implementations per data type
   styles/global.css                 Design tokens and shared primitives
   test/setup.ts                     Test setup
@@ -263,9 +265,9 @@ cannot break the build.
 ## The backend Worker
 
 `worker/` holds a Cloudflare Worker that serves the API from an R2 bucket. It is
-being built in stages; the public reads and the contributor half of
-authentication are in place. Administration -- approving what has been
-submitted, and editing the memorial's details -- arrives in the next stage.
+being built in stages; the public reads, contributor invitations and
+administration are all in place. What remains is hardening: rate limiting,
+security headers, EXIF stripping and real thumbnails.
 
 | Endpoint | Who | Purpose |
 | --- | --- | --- |
@@ -279,6 +281,11 @@ submitted, and editing the memorial's details -- arrives in the next stage.
 | `POST /api/auth/logout` | anyone | Clear the session |
 | `POST /api/memories` | contributor | Submit a memory, for approval |
 | `POST /api/photos` | contributor | Upload a photograph, for approval |
+| `GET /api/admin/queue` | administrator | Everything waiting to be looked at |
+| `POST /api/admin/memories/{id}/approve` `/remove` | administrator | Publish or delete a memory |
+| `POST /api/admin/photos/{id}/approve` `/remove` | administrator | Publish or delete a photograph |
+| `PUT /api/config` | administrator | Edit the memorial's details |
+| `POST /api/admin/invite/rotate` | administrator | Replace the family invitation |
 
 Running it:
 
@@ -319,6 +326,22 @@ recovered from the bucket -- it is printed once, when it is created. Each
 rotation raises a version counter that sessions carry, so **rotating the link
 signs out everyone holding the old one**. That is the remedy if a link is
 forwarded too widely.
+
+**The administrator is authenticated by Cloudflare Access**, not by anything
+this project stores. There is no admin password anywhere in the repository or in
+R2. Access checks identity at the edge and passes a signed token; the Worker
+verifies that token itself -- signature against the team's published keys,
+algorithm pinned to RS256, and the audience, issuer and expiry all checked --
+because a header is only a claim, and anything reaching the Worker another way
+could otherwise simply assert it. `workers_dev = false` closes that other way.
+
+Set `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` in `wrangler.toml` from the Access
+application's overview page. **While they are unset no administrator exists**,
+which is the safe direction for a misconfiguration to fail in.
+
+**A session cookie can never make anyone an administrator.** The two roles are
+established by entirely separate means, so there is no path from holding the
+family invitation to running the site.
 
 **Nothing submitted appears until it is approved.** A memory or photograph is
 stored in its own object with a pending status and does not join the published
@@ -395,12 +418,25 @@ are only ever rewritten by a single administrator acting deliberately, which is
 what makes it safe for them to be one object each -- and it makes the public
 read path a single R2 GET.
 
+### Administering the memorial
+
+`/admin` shows everything waiting, the memorial's details, and the family
+invitation. Approving publishes; rejecting deletes, because something you did
+not want on the memorial should not sit in the bucket indefinitely.
+
+The published lists are rebuilt from scratch on every approval rather than
+edited. That is a handful of reads at this scale and it cannot drift -- if an
+object and the index ever disagree, the next approval reconciles them. It is
+safe as a single object because only one administrator, acting deliberately,
+ever writes it; contributions never touch it.
+
+An administrator can view a photograph that is still waiting, since they have to
+look at it to moderate it. To everyone else it is a 404.
+
 ### Still to come
 
-Cloudflare Access with the admin API and interface -- approving submissions and
-editing the memorial's details -- then rate limiting, security headers, EXIF
-stripping and real thumbnails. Until thumbnails exist, a request for one falls
-back to the original image.
+Rate limiting, security headers, EXIF stripping and real thumbnails. Until
+thumbnails exist, a request for one falls back to the original image.
 
 With no `VITE_API_URL` set the site still runs entirely on mock data, and the
 mock treats everyone as a contributor: there is nothing to protect when

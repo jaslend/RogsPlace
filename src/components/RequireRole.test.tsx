@@ -93,3 +93,39 @@ describe('RequireRole', () => {
     expect(screen.queryByText('The form')).not.toBeInTheDocument();
   });
 });
+
+describe('RequireRole for administrators', () => {
+  it('shows the page to an administrator', async () => {
+    getSession.mockResolvedValue({ role: 'administrator' });
+
+    render(
+      <MemoryRouter>
+        <SessionProvider>
+          <RequireRole requires="administrator" action="look after this memorial">
+            <p>The admin page</p>
+          </RequireRole>
+        </SessionProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('The admin page')).toBeInTheDocument();
+  });
+
+  it.each(['contributor', 'visitor'] as const)('refuses a %s', async (role) => {
+    getSession.mockResolvedValue({ role });
+
+    render(
+      <MemoryRouter>
+        <SessionProvider>
+          <RequireRole requires="administrator" action="look after this memorial">
+            <p>The admin page</p>
+          </RequireRole>
+        </SessionProvider>
+      </MemoryRouter>,
+    );
+
+    // Holding the family invitation is not the same as looking after the site.
+    expect(await screen.findByText(/not yours to see/i)).toBeInTheDocument();
+    expect(screen.queryByText('The admin page')).not.toBeInTheDocument();
+  });
+});
