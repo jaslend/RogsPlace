@@ -8,10 +8,12 @@ import {
   giveInvite,
   photoUpload,
   pngBytes,
+  resetStorage,
   sameSite,
 } from './support';
 
 beforeEach(async () => {
+  await resetStorage();
   await giveInvite();
 });
 
@@ -199,17 +201,18 @@ describe('what each role may do', () => {
   );
 
   it.each([
-    '/api/admin/queue',
-    '/api/config',
     '/api/memories/some-id',
-  ])('does not yet expose an administrative route at %s', async (path) => {
+    '/api/photos/some-id',
+    '/api/admin/anything-else',
+  ])('leaves %s unrouted rather than half-open', async (path) => {
     const response = await SELF.fetch(`${SITE}${path}`, {
       method: 'PUT',
       headers: sameSite(await cookieFor('contributor')),
       body: '{}',
     });
 
-    // Stage 3 adds these. Until then they must not exist at all.
+    // The router grants nothing by pattern: a path it does not name is a 404,
+    // not something that falls through to a handler.
     expect(response.status).toBe(404);
   });
 });

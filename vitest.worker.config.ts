@@ -18,7 +18,13 @@ export default defineConfig({
         // never lives in the repository. Tests need a deterministic one, so it
         // is supplied here rather than from a .dev.vars file that CI would not
         // have.
-        bindings: { SESSION_SIGNING_KEY: 'test-signing-key-not-used-anywhere-real' },
+        bindings: {
+          SESSION_SIGNING_KEY: 'test-signing-key-not-used-anywhere-real',
+          // Access configuration. The team domain is never contacted for real:
+          // the tests stub the certificate endpoint with a keypair they own.
+          ACCESS_TEAM_DOMAIN: 'rogsplace.cloudflareaccess.com',
+          ACCESS_AUD: 'test-access-audience',
+        },
       },
     }),
   ],
