@@ -1,0 +1,14 @@
+# Copy to .dev.vars for local Worker development. .dev.vars is never committed.
+#
+# These are Worker secrets, not browser configuration: they are read by the
+# Worker at the edge and never reach the bundle. In production they are set with
+#   wrangler secret put SESSION_SIGNING_KEY
+# and never written to wrangler.toml, which is committed.
+
+# Key used to sign session cookies. Any long random string will do; generate one
+# with:
+#   node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
+#
+# Changing it signs everybody out, which is the quickest way to end every
+# session at once if something has gone wrong.
+SESSION_SIGNING_KEY=replace-me-with-a-long-random-value

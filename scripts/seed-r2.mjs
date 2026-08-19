@@ -24,9 +24,19 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
 
-const BUCKET = 'rogsplace';
+/**
+ * `wrangler dev` binds preview_bucket_name, not bucket_name, so a local run has
+ * to target that one or the Worker will not see what this script wrote.
+ */
+function bucketName(args) {
+  const explicit = args.indexOf('--bucket');
+  if (explicit !== -1) return (args[explicit + 1] ?? '').trim();
+  return args.includes('--local') ? 'rogsplace-preview' : 'rogsplace';
+}
 
-const args = new Set(process.argv.slice(2));
+const argv = process.argv.slice(2);
+const args = new Set(argv);
+const BUCKET = bucketName(argv);
 const dryRun = args.has('--dry-run');
 const force = args.has('--force');
 const remote = args.has('--local') ? [] : ['--remote'];

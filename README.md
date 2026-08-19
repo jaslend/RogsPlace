@@ -205,9 +205,13 @@ stops GitHub Pages running the output through Jekyll.
 ```
 .github/workflows/deploy-pages.yml  Build, test and publish to GitHub Pages
 scripts/seed-r2.mjs                 One-off migration of site details into R2
+scripts/create-invite.mjs           Create or rotate the family invitation link
 wrangler.toml                       Worker name, bindings and routes
 worker/
   src/index.ts                      Router -- every reachable route is listed here
+  src/auth/session.ts               Signed session cookies
+  src/auth/invite.ts                Invitation hashing and comparison
+  src/auth/context.ts               Resolving a role, refusing a request
   src/http.ts                       Responses, security headers, CORS, origin checks
   src/storage.ts                    R2 keys, id validation, JSON reads
   src/routes/                       One module per resource
@@ -221,6 +225,8 @@ src/
   components/                       Header, Navigation, Footer, cards, lightbox,
                                     error boundary, loading/empty/error panels
   config/appConfig.ts               The only reader of import.meta.env
+  config/limits.ts                  Validation limits shared with the Worker
+  context/SessionContext.tsx        The caller's role, for presentation only
   context/SiteConfigContext.tsx     Loads site.json once, shares it
   data/                             Mock site, memories and photos JSON
   hooks/useAsyncData.ts             Loading / success / error state for a fetch
@@ -257,18 +263,22 @@ cannot break the build.
 ## The backend Worker
 
 `worker/` holds a Cloudflare Worker that serves the API from an R2 bucket. It is
-being built in stages; this first stage provides the public read endpoints only.
-There are no write endpoints and no authentication yet, so nothing can be
-changed through it.
+being built in stages; the public reads and the contributor half of
+authentication are in place. Administration -- approving what has been
+submitted, and editing the memorial's details -- arrives in the next stage.
 
-| Endpoint | Purpose |
-| --- | --- |
-| `GET /api/health` | Liveness check |
-| `GET /api/config` | The memorial's details |
-| `GET /api/memories` | Published memories, newest first |
-| `GET /api/photos` | Published photographs |
-| `GET /api/photos/{id}/image` | Full-size photograph |
-| `GET /api/photos/{id}/thumb` | Thumbnail |
+| Endpoint | Who | Purpose |
+| --- | --- | --- |
+| `GET /api/health` | anyone | Liveness check |
+| `GET /api/config` | anyone | The memorial's details |
+| `GET /api/memories` | anyone | Published memories, newest first |
+| `GET /api/photos` | anyone | Published photographs |
+| `GET /api/photos/{id}/image` `/thumb` | anyone | The image, if published |
+| `POST /api/auth/invite` | anyone | Exchange an invitation for a session |
+| `GET /api/auth/session` | anyone | The caller's current role |
+| `POST /api/auth/logout` | anyone | Clear the session |
+| `POST /api/memories` | contributor | Submit a memory, for approval |
+| `POST /api/photos` | contributor | Upload a photograph, for approval |
 
 Running it:
 
@@ -276,11 +286,70 @@ Running it:
 npm run worker:dev          # http://localhost:8787, local simulated R2
 npm run test:worker         # tests, in the real Workers runtime
 npm run worker:seed -- --dry-run   # show what would be written to R2
+npm run worker:invite -- --local   # create a family invitation link
 ```
+
+Local development needs a signing key: copy `.dev.vars.example` to `.dev.vars`
+and put a long random value in it. `.dev.vars` is never committed.
+
+Note that `wrangler dev` binds `preview_bucket_name`, so the scripts target
+`rogsplace-preview` when given `--local`. Without that they would write to the
+production bucket and the local Worker would not see it.
 
 To point the site at it, set `VITE_API_URL=http://localhost:8787` in
 `.env.local` and run `npm run dev`. With that unset the site continues to use
 the mock data, so neither half blocks the other.
+
+### Who may do what
+
+Three roles. **Visitors** read. **Contributors** have redeemed the family
+invitation link and may submit. **Administrators** approve and edit -- next
+stage.
+
+The invitation is a single link the administrator shares. Redeeming it sets a
+signed, `HttpOnly`, `SameSite=Lax` session cookie; there are no accounts and no
+passwords, and no session is stored anywhere. Create or rotate the link with:
+
+```bash
+npm run worker:invite -- --site https://rogsplace.uk
+```
+
+Only the SHA-256 hash of the token is kept in R2, so the link cannot be
+recovered from the bucket -- it is printed once, when it is created. Each
+rotation raises a version counter that sessions carry, so **rotating the link
+signs out everyone holding the old one**. That is the remedy if a link is
+forwarded too widely.
+
+**Nothing submitted appears until it is approved.** A memory or photograph is
+stored in its own object with a pending status and does not join the published
+index, which is what the public endpoints read. A pending photograph is a 404
+even to the person who uploaded it. This is what makes a shared invitation link
+safe to hand around: the worst a leaked link achieves is a queue an
+administrator has to clear.
+
+**The interface is not the control.** `RequireRole` in the browser decides what
+to *show*; every write endpoint in the Worker checks the session for itself, and
+that is the check that matters. Anyone can bypass the former from a console and
+gain nothing.
+
+**Cross-site requests are refused twice.** `SameSite=Lax` keeps the cookie off
+cross-site posts, and every write also checks the `Origin` header. Together
+those remove any need for CSRF tokens.
+
+**A missing signing key fails closed.** A Worker deployed without
+`SESSION_SIGNING_KEY` refuses to issue or accept any session, so the mistake
+means nobody is signed in rather than everybody.
+
+**One photograph per request.** A Worker has far less memory than ten
+twenty-megabyte files would need, so the browser uploads them one at a time.
+One failure then does not lose the rest, and progress is honest.
+
+**Uploads are identified by their contents.** The Worker reads the file's magic
+bytes and accepts only JPEG, PNG and WebP, whatever the browser declared. An
+SVG, an HTML page or an executable renamed to `.jpg` is refused -- those are
+what would otherwise turn an upload form into a way to serve script from this
+origin. The Worker also names every stored object itself; a filename from a
+browser is never used as a storage key.
 
 ### Things worth knowing
 
@@ -328,9 +397,14 @@ read path a single R2 GET.
 
 ### Still to come
 
-Contributor invitations and the session cookie, then Cloudflare Access with the
-admin API and UI, then rate limiting, security headers and EXIF stripping. Until
-those land, the Add a Memory and Upload Photos pages remain honest mock-ups.
+Cloudflare Access with the admin API and interface -- approving submissions and
+editing the memorial's details -- then rate limiting, security headers, EXIF
+stripping and real thumbnails. Until thumbnails exist, a request for one falls
+back to the original image.
+
+With no `VITE_API_URL` set the site still runs entirely on mock data, and the
+mock treats everyone as a contributor: there is nothing to protect when
+submissions never leave the browser, and the forms say so.
 
 ## Planned architecture
 
