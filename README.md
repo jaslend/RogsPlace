@@ -156,6 +156,13 @@ POST   /api/photos
 DELETE /api/photos/{id}
 ```
 
+## Deploying to Cloudflare
+
+Nothing is deployed to Cloudflare yet. `docs/cloudflare-deployment.md` covers
+it end to end -- both getting started without a domain, and the full deployment
+once one exists -- along with the free-tier allowances and the handful of things
+that will catch you out.
+
 ## Deployment to GitHub Pages
 
 `.github/workflows/deploy-pages.yml` builds and publishes the site.
