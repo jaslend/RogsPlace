@@ -1,29 +1,37 @@
 import type { Env } from '../env';
 import { problem } from '../http';
+import { accessTokenFrom, verifyAccessToken } from './access';
 import { readInvite } from './invite';
 import { readCookie, readSessionToken, SESSION_COOKIE, type Role } from './session';
 
 /**
  * Works out who is asking.
  *
- * A session is only honoured while its `ver` still matches the current
- * invitation, so rotating the invite signs out everyone who redeemed the old
- * link -- without storing a single session anywhere.
+ * The two roles are established by entirely separate means. An administrator is
+ * whoever holds a valid Cloudflare Access token -- never a session cookie, so
+ * there is nothing to forge and no way to be promoted by one. A contributor is
+ * whoever holds a session cookie issued against the current invitation; the
+ * version check means rotating the invite signs out everyone who redeemed the
+ * old link, without storing a single session anywhere.
  */
 export async function resolveRole(request: Request, env: Env): Promise<Role> {
+  const accessToken = accessTokenFrom(request);
+  if (accessToken !== null) {
+    const identity = await verifyAccessToken(env, accessToken);
+    if (identity !== null) return 'administrator';
+  }
+
   const token = readCookie(request, SESSION_COOKIE);
   if (token === null) return 'visitor';
 
   const session = await readSessionToken(env, token);
-  if (session === null) return 'visitor';
+  // A cookie can only ever make somebody a contributor.
+  if (session === null || session.role !== 'contributor') return 'visitor';
 
-  if (session.role === 'contributor') {
-    const invite = await readInvite(env);
-    const currentVersion = invite === null ? null : invite.version;
-    if (currentVersion === null || session.ver !== currentVersion) return 'visitor';
-  }
+  const invite = await readInvite(env);
+  if (invite === null || session.ver !== invite.version) return 'visitor';
 
-  return session.role;
+  return 'contributor';
 }
 
 const MAY_CONTRIBUTE: readonly Role[] = ['contributor', 'administrator'];
@@ -44,4 +52,17 @@ export function requireContributor(role: Role, request: Request, env: Env): Resp
     request,
     env,
   );
+}
+
+/**
+ * Refuses a request that is not from an administrator.
+ *
+ * Access should already have stopped anyone else at the edge, so reaching this
+ * means either Access is not configured, or the request arrived by some route
+ * that bypasses it. Both are refused here.
+ */
+export function requireAdministrator(role: Role, request: Request, env: Env): Response | null {
+  if (role === 'administrator') return null;
+
+  return problem(403, 'That is only available to whoever looks after this memorial.', request, env);
 }

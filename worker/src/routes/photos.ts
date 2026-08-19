@@ -53,14 +53,17 @@ export async function servePhoto(
   env: Env,
   id: string,
   variant: 'image' | 'thumb',
+  role: Role,
 ): Promise<Response> {
   if (!isSafeId(id)) return notFound(request, env);
 
   const metadata = await readJson<StoredPhoto>(env, keys.photoMetadata(id));
 
   // Deliberately a 404 rather than a 403: refusing differently would confirm
-  // that a photograph exists and is merely awaiting approval.
-  if (metadata === null || metadata.status !== 'published') {
+  // that a photograph exists and is merely awaiting approval. An administrator
+  // sees everything, because they have to look at it to moderate it.
+  const visible = metadata !== null && (metadata.status === 'published' || role === 'administrator');
+  if (metadata === null || !visible) {
     return notFound(request, env);
   }
 
@@ -183,9 +186,10 @@ export async function createPhoto(request: Request, env: Env, role: Role): Promi
     contentType: kind.mime,
   };
 
-  await env.BUCKET.put(keys.photoOriginal(id, kind.extension), bytes, {
-    customMetadata: { status: 'pending' },
-  });
+  // No status on the original: the metadata object is the single source of
+  // truth for it, and rewriting a twenty-megabyte object to change a label
+  // would be absurd.
+  await env.BUCKET.put(keys.photoOriginal(id, kind.extension), bytes);
   await env.BUCKET.put(keys.photoMetadata(id), JSON.stringify(metadata), {
     customMetadata: { status: 'pending' },
   });

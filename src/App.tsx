@@ -6,6 +6,7 @@ import { RequireRole } from './components/RequireRole';
 import { SessionProvider } from './context/SessionContext';
 import { SiteConfigProvider } from './context/SiteConfigContext';
 import { AddMemoryPage } from './pages/AddMemoryPage';
+import { AdminPage } from './pages/AdminPage';
 import { HomePage } from './pages/HomePage';
 import { InvitePage } from './pages/InvitePage';
 import { MemoriesPage } from './pages/MemoriesPage';
@@ -47,6 +48,14 @@ export function App() {
                   }
                 />
                 <Route path="/invite/:token" element={<InvitePage />} />
+                <Route
+                  path="/admin"
+                  element={
+                    <RequireRole requires="administrator" action="look after this memorial">
+                      <AdminPage />
+                    </RequireRole>
+                  }
+                />
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </ErrorBoundary>

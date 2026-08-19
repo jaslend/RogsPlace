@@ -2,6 +2,7 @@ import { env, SELF } from 'cloudflare:test';
 import { beforeEach, describe, expect, it } from 'vitest';
 import placeholder from '../../src/data/site.json';
 import { keys } from '../src/storage';
+import { resetStorage } from './support';
 import type { Memory, PhotoIndexEntry, StoredPhoto } from '../src/types';
 
 const SITE = 'https://rogsplace.test';
@@ -28,6 +29,8 @@ const publishedPhoto: StoredPhoto = {
   originalExtension: 'jpg',
   contentType: 'image/jpeg',
 };
+
+beforeEach(resetStorage);
 
 describe('GET /api/config', () => {
   it('falls back to the committed placeholder when the bucket is empty', async () => {
