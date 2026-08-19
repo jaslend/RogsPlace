@@ -204,6 +204,14 @@ stops GitHub Pages running the output through Jekyll.
 
 ```
 .github/workflows/deploy-pages.yml  Build, test and publish to GitHub Pages
+scripts/seed-r2.mjs                 One-off migration of site details into R2
+wrangler.toml                       Worker name, bindings and routes
+worker/
+  src/index.ts                      Router -- every reachable route is listed here
+  src/http.ts                       Responses, security headers, CORS, origin checks
+  src/storage.ts                    R2 keys, id validation, JSON reads
+  src/routes/                       One module per resource
+  test/                             Tests, run in the real Workers runtime
 public/
   placeholders/                     Demonstration gallery images
   favicon.svg
@@ -245,6 +253,84 @@ Do **not** fill in `src/data/site.json` with the real details — set the
 repository variables instead, as described in "Keeping the real details out of
 the repository". The tests do not read any of these files, so emptying them
 cannot break the build.
+
+## The backend Worker
+
+`worker/` holds a Cloudflare Worker that serves the API from an R2 bucket. It is
+being built in stages; this first stage provides the public read endpoints only.
+There are no write endpoints and no authentication yet, so nothing can be
+changed through it.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/health` | Liveness check |
+| `GET /api/config` | The memorial's details |
+| `GET /api/memories` | Published memories, newest first |
+| `GET /api/photos` | Published photographs |
+| `GET /api/photos/{id}/image` | Full-size photograph |
+| `GET /api/photos/{id}/thumb` | Thumbnail |
+
+Running it:
+
+```bash
+npm run worker:dev          # http://localhost:8787, local simulated R2
+npm run test:worker         # tests, in the real Workers runtime
+npm run worker:seed -- --dry-run   # show what would be written to R2
+```
+
+To point the site at it, set `VITE_API_URL=http://localhost:8787` in
+`.env.local` and run `npm run dev`. With that unset the site continues to use
+the mock data, so neither half blocks the other.
+
+### Things worth knowing
+
+**An empty bucket is fine.** `GET /api/config` falls back to the placeholder
+committed in `src/data/site.json`, and the two indexes fall back to empty
+arrays, so a fresh deployment renders instead of erroring. `npm run worker:seed`
+migrates today's GitHub variable values into R2; it refuses to overwrite an
+existing object without `--force`, because `configuration/site.json` is what an
+administrator will be editing.
+
+**Photographs are served through the Worker**, never from a public bucket. One
+check then governs visibility, and anything not yet approved is a 404 —
+indistinguishable from a photograph that does not exist, so a pending upload
+cannot be found by guessing its URL.
+
+**Image URLs are composed from the request origin** rather than stored, so the
+same bucket serves local development, the test deployment and production
+without rewriting any stored data.
+
+**CORS is an allowlist**, set by `ALLOWED_ORIGINS` in `wrangler.toml`. It must
+never become `*`: that is incompatible with credentialed requests and would let
+any page on the internet call the API with a visitor's session cookie.
+
+**`workers_dev = false`.** The Worker is reachable only through the zone. Later
+stages put Cloudflare Access in front of the admin routes, and an edge policy
+that can be side-stepped by calling `*.workers.dev` directly is not a policy.
+
+### Storage layout
+
+```
+configuration/site.json          Memorial details (an administrator edits these)
+configuration/invite.json        Invite token hash and version (later stage)
+memories/<id>.json               Every memory, with its moderation status
+photos/originals/<id>.<ext>
+photos/thumbnails/<id>.jpg
+metadata/photos/<id>.json
+index/memories.json              Published memories -- rebuilt on approval
+index/photos.json                Published photographs -- rebuilt on approval
+```
+
+Submissions are concurrent, so each gets its own object. The published indexes
+are only ever rewritten by a single administrator acting deliberately, which is
+what makes it safe for them to be one object each -- and it makes the public
+read path a single R2 GET.
+
+### Still to come
+
+Contributor invitations and the session cookie, then Cloudflare Access with the
+admin API and UI, then rate limiting, security headers and EXIF stripping. Until
+those land, the Add a Memory and Upload Photos pages remain honest mock-ups.
 
 ## Planned architecture
 
