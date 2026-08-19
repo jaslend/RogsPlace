@@ -125,12 +125,12 @@ export function UploadPhotosPage() {
         <div className="notice notice--success notice--spaced" role="status">
           <p className="notice__heading">
             Thank you — {uploadedCount} {uploadedCount === 1 ? 'photograph' : 'photographs'}{' '}
-            {uploadedCount === 1 ? 'was' : 'were'} accepted.
+            {uploadedCount === 1 ? 'was' : 'were'} received.
           </p>
           <p>
             {appConfig.useMockData
               ? 'This site is not yet connected to its photograph storage, so nothing has left your device.'
-              : 'They will appear in the gallery once they have been processed.'}
+              : `${uploadedCount === 1 ? 'It' : 'They'} will appear in the gallery once checked, so ${uploadedCount === 1 ? 'it' : 'they'} will not be there straight away.`}
           </p>
         </div>
       ) : null}
