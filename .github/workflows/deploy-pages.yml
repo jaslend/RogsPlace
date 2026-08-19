@@ -6,8 +6,10 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  # Every pull request, not only those targeting main: the work is being
+  # delivered as a stack of branches, and a stacked pull request deserves the
+  # same checks as any other. Only pushes to main deploy -- see the deploy job.
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
 # Read-only by default; the deploy job asks for what it needs and nothing more.
