@@ -15,7 +15,8 @@
     "test:worker": "vitest run --config vitest.worker.config.ts",
     "worker:dev": "wrangler dev",
     "worker:deploy": "wrangler deploy",
-    "worker:seed": "node scripts/seed-r2.mjs"
+    "worker:seed": "node scripts/seed-r2.mjs",
+    "worker:invite": "node scripts/create-invite.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

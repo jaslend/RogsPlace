@@ -53,26 +53,33 @@ function createHttpPhotoService(): PhotoService {
     },
 
     /**
-     * Sends the files to the Worker, which generates the object ids and storage
-     * keys. The browser's filenames are metadata only and are never used as a
-     * storage key.
+     * Sends the photographs to the Worker, which generates the object ids and
+     * storage keys. The browser's filenames are metadata only and are never
+     * used as a storage key.
      *
-     * fetch cannot report upload progress, so callers see 0 then 100. Swapping
-     * in XMLHttpRequest here would give finer progress without touching any
-     * page component.
+     * One request per photograph: a Worker has far less memory than ten
+     * twenty-megabyte files would need, and uploading them separately means one
+     * failure does not lose the rest. It also gives honest per-file progress,
+     * which a single multipart request could not.
      */
     async uploadPhotos(files: File[], onProgress?: UploadProgressHandler) {
       onProgress?.(0);
-      const formData = new FormData();
-      for (const file of files) {
-        formData.append('photos', file, file.name);
+      let uploadedCount = 0;
+
+      for (const [index, file] of files.entries()) {
+        const formData = new FormData();
+        formData.append('photo', file, file.name);
+
+        await apiRequest<PhotoUploadResult>('/api/photos', {
+          method: 'POST',
+          body: formData,
+        });
+
+        uploadedCount += 1;
+        onProgress?.(Math.round(((index + 1) / files.length) * 100));
       }
-      const result = await apiRequest<PhotoUploadResult>('/api/photos', {
-        method: 'POST',
-        body: formData,
-      });
-      onProgress?.(100);
-      return result;
+
+      return { uploadedCount };
     },
   };
 }

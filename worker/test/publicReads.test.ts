@@ -137,9 +137,9 @@ describe('the router', () => {
     expect((await SELF.fetch(`${SITE}/api/nothing-here`)).status).toBe(404);
   });
 
-  it('does not accept writes yet', async () => {
+  it('refuses an anonymous write rather than accepting it', async () => {
     const response = await SELF.fetch(`${SITE}/api/memories`, { method: 'POST', body: '{}' });
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(401);
   });
 });

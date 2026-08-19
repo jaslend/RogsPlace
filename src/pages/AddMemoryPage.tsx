@@ -76,11 +76,11 @@ export function AddMemoryPage() {
 
       {submitState === 'success' ? (
         <div className="notice notice--success notice--spaced" role="status">
-          <p className="notice__heading">Thank you — your memory has been added.</p>
+          <p className="notice__heading">Thank you — your memory has been received.</p>
           <p>
             {appConfig.useMockData
               ? 'This site is not yet connected to its backend, so the memory is kept only until the page is reloaded.'
-              : 'It will now appear on the Memories page.'}
+              : 'It will appear on the Memories page once it has been checked. That is usually quick, but it will not be there straight away.'}
           </p>
         </div>
       ) : null}

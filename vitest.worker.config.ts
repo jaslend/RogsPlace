@@ -10,7 +10,18 @@ import { defineConfig } from 'vitest/config';
  * same configuration that is deployed.
  */
 export default defineConfig({
-  plugins: [cloudflareTest({ wrangler: { configPath: './wrangler.toml' } })],
+  plugins: [
+    cloudflareTest({
+      wrangler: { configPath: './wrangler.toml' },
+      miniflare: {
+        // The real key is a Worker secret set with `wrangler secret put`, and
+        // never lives in the repository. Tests need a deterministic one, so it
+        // is supplied here rather than from a .dev.vars file that CI would not
+        // have.
+        bindings: { SESSION_SIGNING_KEY: 'test-signing-key-not-used-anywhere-real' },
+      },
+    }),
+  ],
   test: {
     include: ['worker/test/**/*.test.ts'],
   },
