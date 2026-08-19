@@ -1,0 +1,33 @@
+name = "rogsplace-api"
+main = "worker/src/index.ts"
+compatibility_date = "2026-08-19"
+
+# The Worker is reachable only through the zone, never through workers.dev.
+#
+# Cloudflare Access protects the admin routes at the edge, and an edge policy
+# that can be side-stepped by calling <name>.<subdomain>.workers.dev directly is
+# not a policy at all. The Worker verifies the Access token itself as well, but
+# closing this door removes the question.
+workers_dev = false
+
+# Origins allowed to make credentialed requests. In production the site and the
+# API share an origin and this matters far less, but local development and the
+# GitHub Pages test site are cross-origin.
+#
+# Never widen this to "*": that is incompatible with credentialed requests and
+# would let any page on the internet call the API as a signed-in contributor.
+[vars]
+ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:4173,https://jaslend.github.io"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "rogsplace"
+preview_bucket_name = "rogsplace-preview"
+
+# Routing for production, once the custom domain is in place. Uncomment and set
+# the zone; the API must live on the same origin as the site so that session
+# cookies are first-party.
+#
+# [[routes]]
+# pattern = "rogsplace.uk/api/*"
+# zone_name = "rogsplace.uk"

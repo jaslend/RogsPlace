@@ -28,6 +28,10 @@ function buildUrl(path: string): string {
 }
 
 function messageForStatus(status: number): string {
+  if (status === 401) {
+    return 'You need the family link before you can do that. Please ask whoever invited you.';
+  }
+  if (status === 403) return 'You do not have permission to do that.';
   if (status === 404) return 'That information could not be found.';
   if (status === 413) return 'The files you selected are too large to upload.';
   if (status === 429) return 'Too many requests have been made. Please try again shortly.';
@@ -55,6 +59,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       method,
       headers,
       body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
+      // The session cookie is HttpOnly, so the browser has to be told to send
+      // it. Without this, every authenticated request would arrive anonymous.
+      credentials: 'include',
       signal: signal ?? AbortSignal.timeout(appConfig.requestTimeoutMs),
     });
   } catch (cause) {
@@ -86,4 +93,7 @@ export const apiClient = {
   get: <T>(path: string, signal?: AbortSignal) => apiRequest<T>(path, { method: 'GET', signal }),
   post: <T>(path: string, body: unknown, signal?: AbortSignal) =>
     apiRequest<T>(path, { method: 'POST', body, signal }),
+  put: <T>(path: string, body: unknown, signal?: AbortSignal) =>
+    apiRequest<T>(path, { method: 'PUT', body, signal }),
+  del: <T>(path: string, signal?: AbortSignal) => apiRequest<T>(path, { method: 'DELETE', signal }),
 };
