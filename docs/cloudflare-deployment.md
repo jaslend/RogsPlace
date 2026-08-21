@@ -8,8 +8,13 @@ Everything here fits inside Cloudflare's free tiers. A domain is the only thing
 that costs money.
 
 There is also a step-by-step walkthrough of the full route, formatted for
-following in a browser, in the project's artifacts ("RogsPlace on Cloudflare").
-This document is the version that lives with the code and covers both routes.
+following in a browser:
+<https://claude.ai/code/artifact/2b495017-4bf7-4ebf-b518-81426e87c18c>. This
+document is the version that lives with the code, and covers both routes.
+
+For why the deployment is shaped this way -- why the domain matters, why
+`workers_dev` has to be off, why Access rather than a password -- see
+[security-model.md](security-model.md).
 
 ---
 

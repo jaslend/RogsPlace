@@ -103,6 +103,15 @@ The workflow maps each `SITE_*` variable to the matching `VITE_SITE_*` build
 variable, `appConfig` reads it, and `siteService` layers it over the placeholder.
 The next push to `main` picks up any change; nothing needs to be committed.
 
+**These are already set on the repository.** `SITE_TITLE`, `SITE_NAME` and
+`SITE_WELCOME_TEXT` hold real values. `SITE_DATE_OF_BIRTH`, `SITE_DATE_OF_DEATH`
+and `SITE_MAIN_PHOTO` are blank, waiting for details nobody has supplied yet.
+
+They hold a single space rather than an empty string, because GitHub rejects an
+empty variable value. `appConfig` trims before deciding, so a whitespace-only
+variable counts as unset and the placeholder shows through -- which is why the
+home page reads "Dates to be added" rather than showing a blank line.
+
 To see the real content locally, put the same values in `.env.local`, which is
 ignored by git. Every `.env*` file except `.env.example` is ignored.
 
@@ -155,6 +164,12 @@ GET    /api/photos/{id}
 POST   /api/photos
 DELETE /api/photos/{id}
 ```
+
+## Security
+
+`docs/security-model.md` sets out the whole model: the three roles, what each
+may do, how the administrator and contributors are authenticated, and what is
+deliberately left unprotected.
 
 ## Deploying to Cloudflare
 
