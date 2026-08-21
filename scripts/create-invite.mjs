@@ -2,7 +2,7 @@
 /**
  * Creates or rotates the family invitation link.
  *
- *   node scripts/create-invite.mjs --site https://rogsplace.uk
+ *   node scripts/create-invite.mjs --site https://rogsplace.co.uk
  *   node scripts/create-invite.mjs --local          target the wrangler dev bucket
  *
  * Only the SHA-256 hash of the token is stored, so the link cannot be recovered
@@ -42,7 +42,7 @@ const site =
   siteIndex === -1 ? 'https://jaslend.github.io/RogsPlace' : (argv[siteIndex + 1] ?? '').trim();
 
 if (site === '') {
-  console.error('--site needs a URL, e.g. --site https://rogsplace.uk');
+  console.error('--site needs a URL, e.g. --site https://rogsplace.co.uk');
   process.exit(1);
 }
 

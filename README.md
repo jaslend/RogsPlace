@@ -340,7 +340,7 @@ signed, `HttpOnly`, `SameSite=Lax` session cookie; there are no accounts and no
 passwords, and no session is stored anywhere. Create or rotate the link with:
 
 ```bash
-npm run worker:invite -- --site https://rogsplace.uk
+npm run worker:invite -- --site https://rogsplace.co.uk
 ```
 
 Only the SHA-256 hash of the token is kept in R2, so the link cannot be

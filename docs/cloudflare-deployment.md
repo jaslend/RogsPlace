@@ -20,8 +20,13 @@ For why the deployment is shaped this way -- why the domain matters, why
 
 ## Where the project stands
 
-The frontend and the backend Worker are both written. Nothing is deployed —
-there has never been a Cloudflare account attached to this project.
+The frontend and the backend Worker are both written. Nothing is deployed yet,
+but the account now exists: **rogsplace.co.uk** was registered through Cloudflare
+Registrar on 21 August 2026 and its zone is live, served by Cloudflare's
+nameservers. Workers is on the free plan.
+
+That means Route B below is the one to follow. Route A is kept for reference,
+and for anyone picking this up without a domain of their own.
 
 | Piece | State |
 | --- | --- |
@@ -160,31 +165,39 @@ and it still does not get you administration.
 
 ### B1. Get the domain onto Cloudflare
 
-Either register through Cloudflare Registrar (sold at cost), or add a domain you
-already own and change its nameservers at your current registrar.
+**Done.** `rogsplace.co.uk` was registered through Cloudflare Registrar (sold at
+cost) on 21 August 2026, so the zone was created in the account automatically and
+no nameserver change was needed. It expires 21 August 2027.
 
-Check: the domain shows **Active** in the dashboard. Pending means the
-nameservers have not propagated yet.
+If you are following this for a different domain: either register through
+Registrar, or add one you already own and change its nameservers at your current
+registrar. Check that it shows **Active** in the dashboard -- Pending means the
+nameservers have not propagated yet. From the command line, `host -t SOA
+<domain>` answering from `*.ns.cloudflare.com` says the same thing.
 
 ### B2. R2, signing key, route
 
-Do A1 and A2 above if you have not already. Then set `workers_dev = false` and
-uncomment the route in `wrangler.toml`:
+Do A1 and A2 above if you have not already.
+
+The route is already set in `wrangler.toml`, along with the production origin in
+`ALLOWED_ORIGINS`:
 
 ```toml
 [[routes]]
-pattern = "rogsplace.uk/api/*"
-zone_name = "rogsplace.uk"
+pattern = "rogsplace.co.uk/api/*"
+zone_name = "rogsplace.co.uk"
 ```
 
-Add the live site to `ALLOWED_ORIGINS` in the same file. Then:
+`zone_name` must match the zone exactly or the deploy is rejected, and the origin
+must be in `ALLOWED_ORIGINS` or every write from the live site is refused by the
+Origin check. Then:
 
 ```bash
 npx wrangler deploy
 npm run worker:seed
 ```
 
-Check: `curl https://rogsplace.uk/api/health` returns `{"status":"ok"}`.
+Check: `curl https://rogsplace.co.uk/api/health` returns `{"status":"ok"}`.
 
 ### B3. The site on Cloudflare Pages
 
@@ -193,9 +206,9 @@ repository:
 
 - Build command: `npm run build`
 - Output directory: `dist`
-- Environment variable: `VITE_API_URL` = `https://rogsplace.uk`
+- Environment variable: `VITE_API_URL` = `https://rogsplace.co.uk`
 
-Then add `rogsplace.uk` as a custom domain on the project.
+Then add `rogsplace.co.uk` as a custom domain on the project.
 
 > **`VITE_API_URL` must be the full origin.** Not `/api` — the client appends
 > `/api/…` itself, so that produces `/api/api/memories`. Not blank — blank means
@@ -207,7 +220,7 @@ and Cloudflare serves from the root.
 ### B4. The family invitation
 
 ```bash
-npm run worker:invite -- --site https://rogsplace.uk
+npm run worker:invite -- --site https://rogsplace.co.uk
 ```
 
 Printed once — only its hash is stored. Running it again rotates it, which signs
@@ -221,7 +234,7 @@ signed out. It should not be there; it is waiting for approval.
 1. Open the Zero Trust dashboard and turn it on. It asks for a team name, which
    becomes `yourteam.cloudflareaccess.com`. Free for 50 users, no card.
 2. Under Access → Applications, add **two** self-hosted applications:
-   `rogsplace.uk/admin` and `rogsplace.uk/api/admin`.
+   `rogsplace.co.uk/admin` and `rogsplace.co.uk/api/admin`.
 3. Give each an Allow policy naming your email address, with one-time PIN as the
    login method.
 4. Put the application's **Audience (AUD) tag** and your team domain into the
@@ -238,8 +251,8 @@ Neither value is secret. The team domain appears in every sign-in URL, and the
 audience tag names an application rather than authorising anything; the Worker
 still verifies the token's signature against Cloudflare's published keys.
 
-Check: `rogsplace.uk/admin` in a private window should ask for your email and
-send a PIN. `curl https://rogsplace.uk/api/admin/queue` with no token must
+Check: `rogsplace.co.uk/admin` in a private window should ask for your email and
+send a PIN. `curl https://rogsplace.co.uk/api/admin/queue` with no token must
 answer 403.
 
 ---

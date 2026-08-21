@@ -17,7 +17,7 @@ workers_dev = false
 # Never widen this to "*": that is incompatible with credentialed requests and
 # would let any page on the internet call the API as a signed-in contributor.
 [vars]
-ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:4173,https://jaslend.github.io"
+ALLOWED_ORIGINS = "https://rogsplace.co.uk,http://localhost:5173,http://localhost:4173,https://jaslend.github.io"
 
 # Cloudflare Access, which authenticates the administrator.
 #
@@ -37,10 +37,12 @@ binding = "BUCKET"
 bucket_name = "rogsplace"
 preview_bucket_name = "rogsplace-preview"
 
-# Routing for production, once the custom domain is in place. Uncomment and set
-# the zone; the API must live on the same origin as the site so that session
-# cookies are first-party.
+# Routing for production. The API lives on the same origin as the site so that
+# session cookies are first-party: they are SameSite=Lax, and a browser will not
+# send them from a site on one domain to an API on another.
 #
-# [[routes]]
-# pattern = "rogsplace.uk/api/*"
-# zone_name = "rogsplace.uk"
+# zone_name must match the zone in the Cloudflare account exactly, or the deploy
+# is rejected.
+[[routes]]
+pattern = "rogsplace.co.uk/api/*"
+zone_name = "rogsplace.co.uk"
