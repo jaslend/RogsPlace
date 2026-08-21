@@ -289,7 +289,7 @@ cannot break the build.
 `worker/` holds a Cloudflare Worker that serves the API from an R2 bucket. It is
 being built in stages; the public reads, contributor invitations and
 administration are all in place, as is the browser-side preparation of uploads.
-What remains is hardening: rate limiting and security headers.
+What remains is hardening: rate limiting.
 
 | Endpoint | Who | Purpose |
 | --- | --- | --- |
@@ -465,9 +465,31 @@ look at it to moderate it. To everyone else it is a 404.
 
 ### Still to come
 
-Rate limiting and security headers. A photograph stored before thumbnails
-existed, or uploaded without one, still serves the full image for a thumbnail
-request rather than failing.
+Rate limiting. A photograph stored before thumbnails existed, or uploaded
+without one, still serves the full image for a thumbnail request rather than
+failing.
+
+### Security headers
+
+`public/_headers` carries the Content Security Policy and its companions. Vite
+copies `public/` into `dist/`, and Cloudflare Pages reads the file from the root
+of the build output, so it needs no wiring.
+
+The policy has no `'unsafe-inline'` and no `'unsafe-eval'`: the build emits one
+external script and one external stylesheet, and `index.html` deliberately
+carries no inline `style` attribute -- the message shown when JavaScript is off
+is styled by `.noscript-message` instead. One attribute would force the escape
+hatch back into `style-src` for the whole site, which is why
+`src/test/securityHeaders.test.ts` fails the build if one reappears.
+
+`blob:` is allowed for images because the upload page previews a chosen
+photograph before sending it. `connect-src` is `'self'` because the site and the
+API share an origin in production; pointing `VITE_API_URL` at another origin
+means adding it there.
+
+**GitHub Pages ignores the file.** The test site therefore runs without these
+headers, which is worth remembering when something works there and not on
+Cloudflare.
 
 With no `VITE_API_URL` set the site still runs entirely on mock data, and the
 mock treats everyone as a contributor: there is nothing to protect when

@@ -135,6 +135,19 @@ a:hover {
   padding: var(--space-6) var(--space-4) var(--space-8);
 }
 
+/*
+ * The message shown when JavaScript is off. It is styled from here rather than
+ * with a style attribute on the element, because an inline style would force
+ * 'unsafe-inline' into the style-src of the Content Security Policy in
+ * public/_headers, for one paragraph.
+ *
+ * The built page links this stylesheet in the head, so it applies even though
+ * nothing has run.
+ */
+.noscript-message {
+  padding: var(--space-4);
+}
+
 .container {
   width: 100%;
   max-width: var(--content-width);

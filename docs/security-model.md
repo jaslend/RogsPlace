@@ -203,8 +203,29 @@ The stored orientation is applied to the pixels before the metadata is
 discarded. Without that step, stripping EXIF would leave portrait photographs
 lying on their side.
 
+## Security headers
+
+`public/_headers` is applied by Cloudflare Pages at the edge. The policy allows
+same-origin scripts, styles, fonts and connections, `blob:` images for the
+upload previews, and nothing else; `object-src`, `frame-ancestors` and the rest
+are shut.
+
+It carries neither `'unsafe-inline'` nor `'unsafe-eval'`. That is the property
+worth defending: a CSP containing `'unsafe-inline'` in `script-src` gives back
+most of the protection it appears to provide, and the site keeps working either
+way, so nothing draws attention to the loss. `src/test/securityHeaders.test.ts`
+pins it, along with the absence of any inline `style` attribute in `index.html`
+that would force the same hatch into `style-src`.
+
+Two headers are set in both places and have to agree: `X-Content-Type-Options`
+and `Referrer-Policy`. Pages sets them for the site, `worker/src/http.ts` sets
+them for the API, and the two are served from one origin.
+
+HSTS is a year with subdomains included, deliberately without `preload`.
+Preloading is close to irreversible -- removal takes months of browser release
+cycles -- and that is not a commitment worth making for a family memorial.
+
 ## Not yet built
 
 The last stage: rate-limiting rules on `/api/auth/invite` and the upload
-endpoints (Cloudflare WAF configuration, not code), and a `_headers` file for
-Pages setting CSP and friends.
+endpoints, which is Cloudflare WAF configuration rather than code.
