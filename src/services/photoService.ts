@@ -3,6 +3,7 @@ import { appConfig } from '../config/appConfig';
 import photosData from '../data/photos.json';
 import type { Photo, PhotoUploadResult } from '../models/Photo';
 import { delay } from '../utils/delay';
+import { preparePhoto } from '../utils/preparePhoto';
 
 /** Reports overall upload progress as a whole percentage, 0 to 100. */
 export type UploadProgressHandler = (percentComplete: number) => void;
@@ -45,7 +46,7 @@ function createMockPhotoService(seed: readonly Photo[] = photosData): PhotoServi
   };
 }
 
-function createHttpPhotoService(): PhotoService {
+export function createHttpPhotoService(): PhotoService {
   return {
     async getPhotos() {
       const photos = await apiRequest<Photo[]>('/api/photos');
@@ -57,18 +58,26 @@ function createHttpPhotoService(): PhotoService {
      * storage keys. The browser's filenames are metadata only and are never
      * used as a storage key.
      *
-     * One request per photograph: a Worker has far less memory than ten
-     * twenty-megabyte files would need, and uploading them separately means one
-     * failure does not lose the rest. It also gives honest per-file progress,
-     * which a single multipart request could not.
+     * Each photograph is downscaled and re-encoded here first, so what goes over
+     * the network is a few hundred kilobytes rather than the original. That is
+     * what keeps the Worker inside its CPU budget, and it removes the EXIF block
+     * -- including any GPS coordinates -- before the picture leaves the device.
+     *
+     * One request per photograph: a Worker has far less memory than ten files at
+     * once would need, and uploading them separately means one failure does not
+     * lose the rest. It also gives honest per-file progress, which a single
+     * multipart request could not.
      */
     async uploadPhotos(files: File[], onProgress?: UploadProgressHandler) {
       onProgress?.(0);
       let uploadedCount = 0;
 
       for (const [index, file] of files.entries()) {
+        const prepared = await preparePhoto(file);
+
         const formData = new FormData();
-        formData.append('photo', file, file.name);
+        formData.append('photo', prepared.image, 'photo.jpg');
+        formData.append('thumbnail', prepared.thumbnail, 'thumbnail.jpg');
 
         await apiRequest<PhotoUploadResult>('/api/photos', {
           method: 'POST',

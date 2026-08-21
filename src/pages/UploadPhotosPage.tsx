@@ -119,6 +119,11 @@ export function UploadPhotosPage() {
           Choose up to {maxFiles} photographs at a time. Each one may be up to{' '}
           {formatFileSize(maxBytesPerFile)}, in {acceptedFormatsLabel} format.
         </p>
+        <p>
+          Photographs are resized on your device before they are sent, so they upload quickly even
+          on a slow connection. This also removes the hidden information cameras record in a photo
+          file, such as where it was taken.
+        </p>
       </header>
 
       {uploadState === 'success' ? (

@@ -34,20 +34,14 @@ and for anyone picking this up without a domain of their own.
 | Worker: public reads | Built, tested, not deployed |
 | Worker: contributor invitations, moderation queue | Built, tested, not deployed |
 | Worker: administration via Cloudflare Access | Built, tested, not deployed |
-| Rate limiting, security headers, EXIF stripping, thumbnails | **Not built** — the last stage |
+| Browser-side downscaling, EXIF stripping, thumbnails | Built, tested, not deployed |
+| Rate limiting, security headers | **Not built** — the last stage |
 
-211 tests pass (74 browser, 137 Worker). `npm test` runs both.
+231 tests pass (89 browser, 142 Worker). `npm test` runs both.
 
 The live site is <https://jaslend.github.io/RogsPlace/>. It uses the mock
 services, so memories and photographs submitted there never leave the browser,
 and the pages say so.
-
-### A note on branches
-
-Stages 2 and 3 were delivered as stacked pull requests and merged into their
-bases rather than into `main`. PR #6 reconciles that. **If `worker/src/auth/`
-does not exist on `main`, that reconciliation has not been merged yet** and the
-complete code is on `feature/contributor-invites`.
 
 ---
 
@@ -268,16 +262,18 @@ it.
 
 **`workers_dev` must be `false` once Access is configured.** See A3.
 
-**The Workers free plan allows 10 ms of CPU per request.** A photograph upload
-reads the whole file into memory before writing it to R2, and a 20 MB image may
-not fit that budget — the symptom is large uploads failing while small ones
-work. Two fixes: stream the request body straight through to R2 instead of
-buffering it, or move to the paid plan at $5/month. Try the code change first.
+**The Workers free plan allows 10 ms of CPU per request.** A photograph upload is
+read into memory before being written to R2, and a 20 MB image would not fit that
+budget. This is why the browser downscales and re-encodes before uploading: the
+Worker only ever receives a few hundred kilobytes, and `uploadLimits.maxUploadBytes`
+(6 MB) refuses anything that skipped that step. If large uploads ever start
+failing, check that limit before reaching for the paid plan.
 
 **Every photograph view is a Worker request**, because images are served through
 the Worker rather than from a public bucket. They are cached as immutable for a
-year, so repeat views are absorbed by the CDN. The free plan's 100,000 requests
-a day is nowhere near a constraint at family scale.
+year, so repeat views are absorbed by the CDN, and the gallery asks for
+thumbnails rather than full photographs. The free plan's 100,000 requests a day
+is nowhere near a constraint at family scale.
 
 **A missing `SESSION_SIGNING_KEY` fails closed** — no session can be issued or
 accepted. A missing `ACCESS_AUD` or `ACCESS_TEAM_DOMAIN` likewise means no
@@ -303,9 +299,12 @@ Verified August 2026. Worth re-checking in the dashboard before committing.
 ## Still to build
 
 The last stage of the security plan: rate limiting (Cloudflare WAF rules, not
-code), a `_headers` file for Pages setting CSP and friends, EXIF stripping on
-upload — family photographs routinely carry GPS coordinates — and real
-thumbnails, generated in the browser before upload. Until thumbnails exist, a
-request for one falls back to the original image.
+code) and a `_headers` file for Pages setting CSP and friends.
 
-None of it blocks deploying what is already built.
+EXIF stripping and thumbnails are done. Both fall out of `src/utils/preparePhoto.ts`,
+which downscales each photograph in the browser and re-encodes it as JPEG before
+upload — the re-encode is what discards the GPS coordinates family photographs
+routinely carry, and the same pass produces the thumbnail. A photograph stored
+without one still serves the full image for a thumbnail request.
+
+Neither remaining item blocks deploying what is already built.
