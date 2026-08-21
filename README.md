@@ -205,9 +205,15 @@ stops GitHub Pages running the output through Jekyll.
 ```
 .github/workflows/deploy-pages.yml  Build, test and publish to GitHub Pages
 scripts/seed-r2.mjs                 One-off migration of site details into R2
+scripts/create-invite.mjs           Create or rotate the family invitation link
 wrangler.toml                       Worker name, bindings and routes
 worker/
   src/index.ts                      Router -- every reachable route is listed here
+  src/auth/session.ts               Signed session cookies
+  src/auth/invite.ts                Invitation hashing and comparison
+  src/auth/access.ts                Verifying Cloudflare Access tokens
+  src/auth/context.ts               Resolving a role, refusing a request
+  src/indexes.ts                    Rebuilding the published lists
   src/http.ts                       Responses, security headers, CORS, origin checks
   src/storage.ts                    R2 keys, id validation, JSON reads
   src/routes/                       One module per resource
@@ -221,11 +227,13 @@ src/
   components/                       Header, Navigation, Footer, cards, lightbox,
                                     error boundary, loading/empty/error panels
   config/appConfig.ts               The only reader of import.meta.env
+  config/limits.ts                  Validation limits shared with the Worker
+  context/SessionContext.tsx        The caller's role, for presentation only
   context/SiteConfigContext.tsx     Loads site.json once, shares it
   data/                             Mock site, memories and photos JSON
   hooks/useAsyncData.ts             Loading / success / error state for a fetch
   models/                           SiteConfig, Memory, Photo
-  pages/                            One component per route
+  pages/                            One component per route, including /admin
   services/                         Mock and HTTP implementations per data type
   styles/global.css                 Design tokens and shared primitives
   test/setup.ts                     Test setup
@@ -257,18 +265,27 @@ cannot break the build.
 ## The backend Worker
 
 `worker/` holds a Cloudflare Worker that serves the API from an R2 bucket. It is
-being built in stages; this first stage provides the public read endpoints only.
-There are no write endpoints and no authentication yet, so nothing can be
-changed through it.
+being built in stages; the public reads, contributor invitations and
+administration are all in place. What remains is hardening: rate limiting,
+security headers, EXIF stripping and real thumbnails.
 
-| Endpoint | Purpose |
-| --- | --- |
-| `GET /api/health` | Liveness check |
-| `GET /api/config` | The memorial's details |
-| `GET /api/memories` | Published memories, newest first |
-| `GET /api/photos` | Published photographs |
-| `GET /api/photos/{id}/image` | Full-size photograph |
-| `GET /api/photos/{id}/thumb` | Thumbnail |
+| Endpoint | Who | Purpose |
+| --- | --- | --- |
+| `GET /api/health` | anyone | Liveness check |
+| `GET /api/config` | anyone | The memorial's details |
+| `GET /api/memories` | anyone | Published memories, newest first |
+| `GET /api/photos` | anyone | Published photographs |
+| `GET /api/photos/{id}/image` `/thumb` | anyone | The image, if published |
+| `POST /api/auth/invite` | anyone | Exchange an invitation for a session |
+| `GET /api/auth/session` | anyone | The caller's current role |
+| `POST /api/auth/logout` | anyone | Clear the session |
+| `POST /api/memories` | contributor | Submit a memory, for approval |
+| `POST /api/photos` | contributor | Upload a photograph, for approval |
+| `GET /api/admin/queue` | administrator | Everything waiting to be looked at |
+| `POST /api/admin/memories/{id}/approve` `/remove` | administrator | Publish or delete a memory |
+| `POST /api/admin/photos/{id}/approve` `/remove` | administrator | Publish or delete a photograph |
+| `PUT /api/config` | administrator | Edit the memorial's details |
+| `POST /api/admin/invite/rotate` | administrator | Replace the family invitation |
 
 Running it:
 
@@ -276,11 +293,86 @@ Running it:
 npm run worker:dev          # http://localhost:8787, local simulated R2
 npm run test:worker         # tests, in the real Workers runtime
 npm run worker:seed -- --dry-run   # show what would be written to R2
+npm run worker:invite -- --local   # create a family invitation link
 ```
+
+Local development needs a signing key: copy `.dev.vars.example` to `.dev.vars`
+and put a long random value in it. `.dev.vars` is never committed.
+
+Note that `wrangler dev` binds `preview_bucket_name`, so the scripts target
+`rogsplace-preview` when given `--local`. Without that they would write to the
+production bucket and the local Worker would not see it.
 
 To point the site at it, set `VITE_API_URL=http://localhost:8787` in
 `.env.local` and run `npm run dev`. With that unset the site continues to use
 the mock data, so neither half blocks the other.
+
+### Who may do what
+
+Three roles. **Visitors** read. **Contributors** have redeemed the family
+invitation link and may submit. **Administrators** approve and edit -- next
+stage.
+
+The invitation is a single link the administrator shares. Redeeming it sets a
+signed, `HttpOnly`, `SameSite=Lax` session cookie; there are no accounts and no
+passwords, and no session is stored anywhere. Create or rotate the link with:
+
+```bash
+npm run worker:invite -- --site https://rogsplace.uk
+```
+
+Only the SHA-256 hash of the token is kept in R2, so the link cannot be
+recovered from the bucket -- it is printed once, when it is created. Each
+rotation raises a version counter that sessions carry, so **rotating the link
+signs out everyone holding the old one**. That is the remedy if a link is
+forwarded too widely.
+
+**The administrator is authenticated by Cloudflare Access**, not by anything
+this project stores. There is no admin password anywhere in the repository or in
+R2. Access checks identity at the edge and passes a signed token; the Worker
+verifies that token itself -- signature against the team's published keys,
+algorithm pinned to RS256, and the audience, issuer and expiry all checked --
+because a header is only a claim, and anything reaching the Worker another way
+could otherwise simply assert it. `workers_dev = false` closes that other way.
+
+Set `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` in `wrangler.toml` from the Access
+application's overview page. **While they are unset no administrator exists**,
+which is the safe direction for a misconfiguration to fail in.
+
+**A session cookie can never make anyone an administrator.** The two roles are
+established by entirely separate means, so there is no path from holding the
+family invitation to running the site.
+
+**Nothing submitted appears until it is approved.** A memory or photograph is
+stored in its own object with a pending status and does not join the published
+index, which is what the public endpoints read. A pending photograph is a 404
+even to the person who uploaded it. This is what makes a shared invitation link
+safe to hand around: the worst a leaked link achieves is a queue an
+administrator has to clear.
+
+**The interface is not the control.** `RequireRole` in the browser decides what
+to *show*; every write endpoint in the Worker checks the session for itself, and
+that is the check that matters. Anyone can bypass the former from a console and
+gain nothing.
+
+**Cross-site requests are refused twice.** `SameSite=Lax` keeps the cookie off
+cross-site posts, and every write also checks the `Origin` header. Together
+those remove any need for CSRF tokens.
+
+**A missing signing key fails closed.** A Worker deployed without
+`SESSION_SIGNING_KEY` refuses to issue or accept any session, so the mistake
+means nobody is signed in rather than everybody.
+
+**One photograph per request.** A Worker has far less memory than ten
+twenty-megabyte files would need, so the browser uploads them one at a time.
+One failure then does not lose the rest, and progress is honest.
+
+**Uploads are identified by their contents.** The Worker reads the file's magic
+bytes and accepts only JPEG, PNG and WebP, whatever the browser declared. An
+SVG, an HTML page or an executable renamed to `.jpg` is refused -- those are
+what would otherwise turn an upload form into a way to serve script from this
+origin. The Worker also names every stored object itself; a filename from a
+browser is never used as a storage key.
 
 ### Things worth knowing
 
@@ -326,11 +418,29 @@ are only ever rewritten by a single administrator acting deliberately, which is
 what makes it safe for them to be one object each -- and it makes the public
 read path a single R2 GET.
 
+### Administering the memorial
+
+`/admin` shows everything waiting, the memorial's details, and the family
+invitation. Approving publishes; rejecting deletes, because something you did
+not want on the memorial should not sit in the bucket indefinitely.
+
+The published lists are rebuilt from scratch on every approval rather than
+edited. That is a handful of reads at this scale and it cannot drift -- if an
+object and the index ever disagree, the next approval reconciles them. It is
+safe as a single object because only one administrator, acting deliberately,
+ever writes it; contributions never touch it.
+
+An administrator can view a photograph that is still waiting, since they have to
+look at it to moderate it. To everyone else it is a 404.
+
 ### Still to come
 
-Contributor invitations and the session cookie, then Cloudflare Access with the
-admin API and UI, then rate limiting, security headers and EXIF stripping. Until
-those land, the Add a Memory and Upload Photos pages remain honest mock-ups.
+Rate limiting, security headers, EXIF stripping and real thumbnails. Until
+thumbnails exist, a request for one falls back to the original image.
+
+With no `VITE_API_URL` set the site still runs entirely on mock data, and the
+mock treats everyone as a contributor: there is nothing to protect when
+submissions never leave the browser, and the forms say so.
 
 ## Planned architecture
 

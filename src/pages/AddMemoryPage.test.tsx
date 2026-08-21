@@ -77,7 +77,7 @@ describe('AddMemoryPage', () => {
     await user.click(screen.getByRole('button', { name: 'Add memory' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'Thank you — your memory has been added.',
+      'Thank you — your memory has been received.',
     );
     expect(addMemory).toHaveBeenCalledWith({ name: 'Alex', message: 'A memory worth keeping.' });
     expect(screen.getByLabelText('Your name')).toHaveValue('');

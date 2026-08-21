@@ -20,5 +20,5 @@
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true
   },
-  "include": ["src", "test", "../src/models", "../src/data"]
+  "include": ["src", "test", "../src/models", "../src/data", "../src/config/limits.ts"]
 }

@@ -1,0 +1,101 @@
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--colour-border);
+  padding-bottom: var(--space-3);
+}
+
+.sectionHeader h2 {
+  margin: 0;
+}
+
+.count {
+  font-size: 0.9rem;
+  color: var(--colour-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.queueItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.queueMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-4);
+}
+
+.queueName {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.queueDate {
+  font-size: 0.9rem;
+  color: var(--colour-text-muted);
+}
+
+.queueMessage {
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.queuePreview {
+  width: 100%;
+  max-width: 20rem;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background-color: var(--colour-surface-sunken);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.photoGrid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.inviteToken {
+  display: block;
+  padding: var(--space-3);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background-color: var(--colour-surface-sunken);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+  word-break: break-all;
+  margin-top: var(--space-3);
+}
+
+.rotateAction {
+  margin-top: var(--space-5);
+}

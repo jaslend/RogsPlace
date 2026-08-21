@@ -10,6 +10,7 @@
  */
 
 import type { SiteConfig } from '../models/SiteConfig';
+import { memoryFormLimits, uploadLimits } from './limits';
 
 function stripTrailingSlash(value: string): string {
   return value.endsWith('/') ? value.slice(0, -1) : value;
@@ -36,19 +37,11 @@ export const appConfig = {
   /** React Router basename: as above but without the trailing slash. */
   routerBasename: stripTrailingSlash(baseUrl) || '/',
 
-  /** Upload limits, mirrored by the backend once it exists. */
-  upload: {
-    maxFiles: 10,
-    maxBytesPerFile: 20 * 1024 * 1024,
-    acceptedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'] as const,
-    acceptedExtensions: ['.jpg', '.jpeg', '.png', '.webp'] as const,
-  },
+  /** Upload limits. The Worker enforces the same numbers -- see config/limits.ts. */
+  upload: uploadLimits,
 
-  /** Limits applied to the memory form. */
-  memoryForm: {
-    maxNameLength: 80,
-    maxMessageLength: 2000,
-  },
+  /** Limits applied to the memory form, likewise shared with the Worker. */
+  memoryForm: memoryFormLimits,
 
   /** How long an API request may take before it is abandoned. */
   requestTimeoutMs: 15_000,

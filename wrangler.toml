@@ -19,6 +19,19 @@ workers_dev = false
 [vars]
 ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:4173,https://jaslend.github.io"
 
+# Cloudflare Access, which authenticates the administrator.
+#
+# Neither value is a secret: the team domain appears in every sign-in URL, and
+# the audience tag identifies an application rather than authorising anything.
+# Both come from the Access application's overview page in the Zero Trust
+# dashboard.
+#
+# While they are unset, no administrator exists at all -- the Worker fails
+# closed rather than trusting the header Access would have set.
+#
+# ACCESS_TEAM_DOMAIN = "yourteam.cloudflareaccess.com"
+# ACCESS_AUD = "the-application-audience-tag"
+
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "rogsplace"
