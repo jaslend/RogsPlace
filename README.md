@@ -288,8 +288,8 @@ cannot break the build.
 
 `worker/` holds a Cloudflare Worker that serves the API from an R2 bucket. It is
 being built in stages; the public reads, contributor invitations and
-administration are all in place. What remains is hardening: rate limiting,
-security headers, EXIF stripping and real thumbnails.
+administration are all in place, as is the browser-side preparation of uploads.
+What remains is hardening: rate limiting and security headers.
 
 | Endpoint | Who | Purpose |
 | --- | --- | --- |
@@ -385,9 +385,17 @@ those remove any need for CSRF tokens.
 `SESSION_SIGNING_KEY` refuses to issue or accept any session, so the mistake
 means nobody is signed in rather than everybody.
 
-**One photograph per request.** A Worker has far less memory than ten
-twenty-megabyte files would need, so the browser uploads them one at a time.
-One failure then does not lose the rest, and progress is honest.
+**Photographs are reduced before they are uploaded.** `src/utils/preparePhoto.ts`
+decodes each chosen file, caps its long edge, and re-encodes it as JPEG along
+with a thumbnail. The Worker therefore never receives the original: a few
+hundred kilobytes arrive instead of twenty megabytes, which is what keeps the
+request inside the free plan's 10ms of CPU. Re-encoding also discards the EXIF
+block, so the GPS coordinates family photographs routinely carry never leave the
+device. A file that cannot be prepared is refused rather than sent as-is.
+
+**One photograph per request.** A Worker has far less memory than ten files at
+once would need, so the browser uploads them one at a time. One failure then
+does not lose the rest, and progress is honest.
 
 **Uploads are identified by their contents.** The Worker reads the file's magic
 bytes and accepts only JPEG, PNG and WebP, whatever the browser declared. An
@@ -457,8 +465,9 @@ look at it to moderate it. To everyone else it is a 404.
 
 ### Still to come
 
-Rate limiting, security headers, EXIF stripping and real thumbnails. Until
-thumbnails exist, a request for one falls back to the original image.
+Rate limiting and security headers. A photograph stored before thumbnails
+existed, or uploaded without one, still serves the full image for a thumbnail
+request rather than failing.
 
 With no `VITE_API_URL` set the site still runs entirely on mock data, and the
 mock treats everyone as a contributor: there is nothing to protect when
@@ -507,6 +516,14 @@ must additionally:
 - reject executable content, HTML and JavaScript,
 - generate its own object ids and storage keys, never reusing a filename
   supplied by the browser.
+
+The same applies to the downscaling in `src/utils/preparePhoto.ts`. Stripping
+EXIF in the browser protects the person uploading, who is the one whose location
+is in the file, and it is the right place to do it because the data then never
+crosses the network at all. It is not a check on a hostile caller: someone
+posting to the API directly can send whatever they like, which is why the Worker
+sniffs the thumbnail as hard as the photograph and enforces
+`uploadLimits.maxUploadBytes` on both.
 
 Secrets must never be given a `VITE_` prefix.
 

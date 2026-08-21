@@ -185,10 +185,26 @@ CORS is an allowlist that echoes the origin. **It must never become `*`** — th
 is incompatible with credentialed requests and would let any page on the
 internet call the API with a visitor's session cookie.
 
+## Photograph metadata
+
+Photographs are downscaled and re-encoded in the browser before upload
+(`src/utils/preparePhoto.ts`). The re-encode discards the EXIF block, which is
+where a camera records the GPS coordinates family photographs routinely carry —
+a memorial site is exactly the sort of place where the address of a house should
+not be published as a side effect of sharing a picture taken in its garden.
+
+Doing this in the browser is deliberate: the data never crosses the network at
+all. That makes it a protection for the person uploading, not a check on a
+hostile one, since anybody posting to the API directly can send whatever they
+like. The Worker therefore sniffs the uploaded thumbnail exactly as hard as the
+photograph, and enforces `uploadLimits.maxUploadBytes` on both.
+
+The stored orientation is applied to the pixels before the metadata is
+discarded. Without that step, stripping EXIF would leave portrait photographs
+lying on their side.
+
 ## Not yet built
 
 The last stage: rate-limiting rules on `/api/auth/invite` and the upload
-endpoints (Cloudflare WAF configuration, not code), a `_headers` file for Pages
-setting CSP and friends, EXIF stripping on upload — family photographs routinely
-carry GPS coordinates — and real thumbnails generated in the browser before
-upload. Until thumbnails exist, a request for one falls back to the original.
+endpoints (Cloudflare WAF configuration, not code), and a `_headers` file for
+Pages setting CSP and friends.

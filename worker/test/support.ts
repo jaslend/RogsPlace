@@ -63,8 +63,26 @@ export function pngBytes(sizeInBytes = 64): Uint8Array {
   return bytes;
 }
 
-export function photoUpload(bytes: Uint8Array, fileName: string, type: string): FormData {
+/** Bytes that begin with a real JPEG signature, which is what a thumbnail must be. */
+export function jpegBytes(sizeInBytes = 64): Uint8Array {
+  const bytes = new Uint8Array(sizeInBytes);
+  bytes.set([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01]);
+  return bytes;
+}
+
+export function photoUpload(
+  bytes: Uint8Array,
+  fileName: string,
+  type: string,
+  thumbnail?: File,
+): FormData {
   const form = new FormData();
   form.append('photo', new File([bytes], fileName, { type }));
+  if (thumbnail !== undefined) form.append('thumbnail', thumbnail);
   return form;
+}
+
+/** The thumbnail the browser generates alongside the photograph. */
+export function thumbnailFile(bytes: Uint8Array = jpegBytes()): File {
+  return new File([bytes], 'thumbnail.jpg', { type: 'image/jpeg' });
 }

@@ -69,8 +69,10 @@ export async function servePhoto(
 
   const original = keys.photoOriginal(id, metadata.originalExtension);
 
-  // Thumbnails are not generated yet, so a request for one falls back to the
-  // original rather than failing. Stage 4 adds real thumbnails.
+  // Thumbnails are generated in the browser and uploaded with the photograph.
+  // Anything stored before that, or uploaded without one, still has to be
+  // servable, so a missing thumbnail falls back to the full photograph rather
+  // than failing.
   let object = variant === 'thumb' ? await env.BUCKET.get(keys.photoThumbnail(id)) : null;
   const servingOriginal = object === null;
   if (object === null) object = await env.BUCKET.get(original);
@@ -126,6 +128,32 @@ function sniffImage(bytes: Uint8Array): { mime: string; extension: string } | nu
   return match === undefined ? null : { mime: match.mime, extension: match.extension };
 }
 
+/** Distinguishes "no thumbnail was sent" from "one was, and it is not usable". */
+const INVALID_THUMBNAIL = Symbol('invalid thumbnail');
+
+/**
+ * Reads the thumbnail field, if the upload carried one.
+ *
+ * Returns null when the field is absent, the bytes when they sniff as a JPEG,
+ * and INVALID_THUMBNAIL when something was sent that is not one. The size cap is
+ * a fraction of the photograph's: a thumbnail larger than that is not a
+ * thumbnail, whatever it claims to be.
+ */
+async function readThumbnail(form: FormData): Promise<Uint8Array | null | typeof INVALID_THUMBNAIL> {
+  const field = form.get('thumbnail');
+  if (field === null) return null;
+  if (!(field instanceof File)) return INVALID_THUMBNAIL;
+
+  if (field.size === 0 || field.size > uploadLimits.maxUploadBytes / 8) {
+    return INVALID_THUMBNAIL;
+  }
+
+  const bytes = new Uint8Array(await field.arrayBuffer());
+  const kind = sniffImage(bytes);
+
+  return kind !== null && kind.mime === 'image/jpeg' ? bytes : INVALID_THUMBNAIL;
+}
+
 /**
  * Accepts one photograph from a contributor, into the moderation queue.
  *
@@ -142,9 +170,11 @@ export async function createPhoto(request: Request, env: Env, role: Role): Promi
     return problem(403, 'That request did not come from this site.', request, env);
   }
 
-  // Refuse an oversized body before reading any of it into memory.
+  // Refuse an oversized body before reading any of it into memory. The browser
+  // downscales before uploading, so a body anywhere near this ceiling did not
+  // come from the site's own upload page.
   const declaredLength = Number(request.headers.get('Content-Length') ?? '0');
-  if (declaredLength > uploadLimits.maxBytesPerFile + 1024 * 1024) {
+  if (declaredLength > uploadLimits.maxUploadBytes + 1024 * 1024) {
     return problem(413, 'That photograph is too large.', request, env);
   }
 
@@ -161,7 +191,7 @@ export async function createPhoto(request: Request, env: Env, role: Role): Promi
   }
 
   if (file.size === 0) return problem(400, 'That file is empty.', request, env);
-  if (file.size > uploadLimits.maxBytesPerFile) {
+  if (file.size > uploadLimits.maxUploadBytes) {
     return problem(413, 'That photograph is too large.', request, env);
   }
 
@@ -171,6 +201,23 @@ export async function createPhoto(request: Request, env: Env, role: Role): Promi
     return problem(
       400,
       'That file is not a JPEG, PNG or WebP photograph. Please choose another.',
+      request,
+      env,
+    );
+  }
+
+  // The thumbnail the browser generated alongside the photograph. Optional, so
+  // that an upload without one still succeeds -- serving falls back to the full
+  // photograph -- but sniffed just as hard when it is there, because it is
+  // untrusted bytes that will be served back to browsers.
+  //
+  // JPEG only: the thumbnail is stored under a .jpg key and served with that
+  // type, so accepting another format would put the two out of step.
+  const thumbnail = await readThumbnail(form);
+  if (thumbnail === INVALID_THUMBNAIL) {
+    return problem(
+      400,
+      'The thumbnail sent with that photograph could not be read.',
       request,
       env,
     );
@@ -187,9 +234,10 @@ export async function createPhoto(request: Request, env: Env, role: Role): Promi
   };
 
   // No status on the original: the metadata object is the single source of
-  // truth for it, and rewriting a twenty-megabyte object to change a label
-  // would be absurd.
+  // truth for it, and rewriting the stored object to change a label would be
+  // wasteful.
   await env.BUCKET.put(keys.photoOriginal(id, kind.extension), bytes);
+  if (thumbnail !== null) await env.BUCKET.put(keys.photoThumbnail(id), thumbnail);
   await env.BUCKET.put(keys.photoMetadata(id), JSON.stringify(metadata), {
     customMetadata: { status: 'pending' },
   });
