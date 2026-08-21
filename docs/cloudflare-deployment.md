@@ -35,9 +35,10 @@ and for anyone picking this up without a domain of their own.
 | Worker: contributor invitations, moderation queue | Built, tested, not deployed |
 | Worker: administration via Cloudflare Access | Built, tested, not deployed |
 | Browser-side downscaling, EXIF stripping, thumbnails | Built, tested, not deployed |
-| Rate limiting, security headers | **Not built** — the last stage |
+| Security headers for Pages | Built, tested, not deployed |
+| Rate limiting | **Not built** — the last stage, and needs the zone |
 
-231 tests pass (89 browser, 142 Worker). `npm test` runs both.
+247 tests pass (105 browser, 142 Worker). `npm test` runs both.
 
 The live site is <https://jaslend.github.io/RogsPlace/>. It uses the mock
 services, so memories and photographs submitted there never leave the browser,
@@ -298,8 +299,8 @@ Verified August 2026. Worth re-checking in the dashboard before committing.
 
 ## Still to build
 
-The last stage of the security plan: rate limiting (Cloudflare WAF rules, not
-code) and a `_headers` file for Pages setting CSP and friends.
+The last stage of the security plan: rate limiting, which is Cloudflare WAF
+rules rather than code, and so has to wait until the zone is carrying traffic.
 
 EXIF stripping and thumbnails are done. Both fall out of `src/utils/preparePhoto.ts`,
 which downscales each photograph in the browser and re-encodes it as JPEG before
@@ -307,4 +308,9 @@ upload — the re-encode is what discards the GPS coordinates family photographs
 routinely carry, and the same pass produces the thumbnail. A photograph stored
 without one still serves the full image for a thumbnail request.
 
-Neither remaining item blocks deploying what is already built.
+The security headers are done. `public/_headers` sets the Content Security
+Policy and its companions; Vite copies it into `dist/` and Pages applies it from
+the root of the build output, so B3 needs no extra step. Note that GitHub Pages
+ignores the file, so the test site runs without them.
+
+Rate limiting does not block deploying what is already built.

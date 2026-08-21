@@ -1,0 +1,51 @@
+# Security headers for Cloudflare Pages.
+#
+# Pages reads this file from the root of the build output and applies it at the
+# edge. Vite copies everything in public/ to dist/, so it needs no wiring.
+#
+# GitHub Pages ignores the file, which is why the test site does not get these
+# headers. That is worth remembering when something works there and not here.
+#
+# The API is served by the Worker on this same origin (see the route in
+# wrangler.toml), and the Worker sets its own headers on its own responses --
+# nosniff and the same Referrer-Policy. These two halves have to agree; if you
+# change one, look at worker/src/http.ts.
+
+/*
+  # Content Security Policy. The build produces one external script and one
+  # external stylesheet, both same-origin, so nothing here needs 'unsafe-inline'
+  # or 'unsafe-eval' -- which is the point. A policy carrying 'unsafe-inline'
+  # for scripts stops most of the XSS protection it looks like it is providing.
+  #
+  # blob: is in img-src because the upload page previews a chosen photograph
+  # with URL.createObjectURL before it is sent, and preparePhoto decodes through
+  # the same mechanism where createImageBitmap is unavailable.
+  #
+  # connect-src is 'self' because the site and the API share an origin in
+  # production. If VITE_API_URL ever points somewhere else, the fetches will be
+  # refused until that origin is added here.
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+
+  # Never let a browser guess a type it was not given. The Worker sniffs every
+  # uploaded photograph, but this covers what Pages itself serves.
+  X-Content-Type-Options: nosniff
+
+  # Redundant with frame-ancestors above, kept for browsers that predate it.
+  # Clickjacking a memorial site is unlikely; the header costs nothing.
+  X-Frame-Options: DENY
+
+  # Send the origin to other sites but never the path. An invitation link in the
+  # address bar should not travel to anywhere the visitor clicks through to.
+  Referrer-Policy: strict-origin-when-cross-origin
+
+  # Nothing here needs a camera, a microphone or a location, so refuse them
+  # rather than leaving the decision to a permission prompt.
+  Permissions-Policy: accelerometer=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()
+
+  # Keep any window this page opens in its own browsing context group.
+  Cross-Origin-Opener-Policy: same-origin
+
+  # One year, and subdomains included. Deliberately without preload: that is a
+  # one-way door -- getting a domain off the preload list takes months -- and it
+  # is not worth it for a family memorial.
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
